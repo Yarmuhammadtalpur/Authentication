@@ -1,21 +1,23 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const passportLocalMongoose = require('passport-local-mongoose');
 
 
 const userschema = new mongoose.Schema({
     email:{
         type: String,
-        required: true
     },
     password:{
         type: String,
-        required: true
     }
     
 
 
 },{ timestamps: true} )
 
+userschema.plugin(passportLocalMongoose);
+
 const Users = mongoose.model("Users", userschema);
+
 
 module.exports = Users;
