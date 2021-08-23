@@ -7,6 +7,8 @@ const morgan = require('morgan');
 const Users = require("./modules/dataschemas");
 const session = require('express-session');
 const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const findOrCreate = require('mongoose-findorcreate')
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({
@@ -26,21 +28,47 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-
 mongoose.connect(process.env.MongoDB_DB_URL, {
    useNewUrlParser: true,
    useUnifiedTopology: true,
    useCreateIndex: true
-});
+})
 const connection = mongoose.connection;
 connection.once('open', () => {
    console.log("Successfully Connected to Database")
 });
 
+//Creating session of user login with passportjs
 passport.use(Users.createStrategy());
 
-passport.serializeUser(Users.serializeUser());
-passport.deserializeUser(Users.deserializeUser());
+
+//changing serialization strategy according to passport docs so it can work for any strategy.
+passport.serializeUser(function(user, done) {
+   done(null, user.id);
+ });
+ 
+ passport.deserializeUser(function(id, done) {
+   Users.findById(id, function(err, user) {
+     done(err, user);
+   });
+ });
+
+
+//Google OAuth Authentication Strategy
+passport.use(new GoogleStrategy({
+   clientID: process.env.clientID,
+   clientSecret: process.env.clientSecret,
+   callbackURL: "http://localhost:5000/auth/google/secrets"
+ },
+ function(accessToken, refreshToken, profile, cb) {
+   Users.findOrCreate({ googleId: profile.id }, function (err, user) {
+     return cb(err, user);
+   });
+ }
+));
+
+
+
 
 
 app.listen(port, (req, res) => {
@@ -54,6 +82,21 @@ app.route("/")
    .get((req, res) => {
 
       res.render("home");
+   });
+
+
+app.route("/auth/google")
+   .get(passport.authenticate('google', { scope: ["profile"] }), (req, res)=>{
+      
+
+   });
+
+
+app.route("/auth/google/secrets")
+   .get(passport.authenticate('google', { failureRedirect: '/login' }), (req, res)=>{
+
+      res.redirect('/secrets');
+      
    });
 
 
