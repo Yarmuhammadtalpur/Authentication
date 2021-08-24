@@ -8,7 +8,8 @@ const Users = require("./modules/dataschemas");
 const session = require('express-session');
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const findOrCreate = require('mongoose-findorcreate')
+const findOrCreate = require('mongoose-findorcreate');
+const FacebookStrategy = require('passport-facebook');
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({
@@ -67,7 +68,20 @@ passport.use(new GoogleStrategy({
  }
 ));
 
+//Facebook Authentication
 
+passport.use(new FacebookStrategy({
+   clientID: process.env.fbAppId,
+   clientSecret: process.env.fbSecret,
+   callbackURL: "http://localhost:5000/auth/facebook/secrets"
+ },
+ function(accessToken, refreshToken, profile, cb) {
+    console.log(profile);
+   Users.findOrCreate({ facebookId: profile.id }, function (err, user) {
+     return cb(err, user);
+   });
+ }
+));
 
 
 
@@ -98,6 +112,17 @@ app.route("/auth/google/secrets")
       res.redirect('/secrets');
       
    });
+
+ app.route("/auth/facebook")
+       .get(passport.authenticate('facebook'));
+
+
+
+ app.route('/auth/facebook/secrets')
+    .get(passport.authenticate('facebook', { failureRedirect: '/login' }), 
+    (req , res)=>{
+       res.redirect('/secrets');
+    })
 
 
 app.route("/secrets")

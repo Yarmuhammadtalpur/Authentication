@@ -12,6 +12,9 @@ const userschema = new mongoose.Schema({
     },
     googleId:{
         type: String
+    },
+    facebookId:{
+        type: String
     }
     
 
