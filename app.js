@@ -29,6 +29,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+
 mongoose.connect(process.env.MongoDB_DB_URL, {
    useNewUrlParser: true,
    useUnifiedTopology: true,
@@ -121,17 +122,23 @@ app.route("/auth/google/secrets")
  app.route('/auth/facebook/secrets')
     .get(passport.authenticate('facebook', { failureRedirect: '/login' }), 
     (req , res)=>{
-       res.redirect('/secrets');
+       res.redirect("/secrets");
     })
 
 
 app.route("/secrets")
    .get((req, res)=>{
-      if(req.isAuthenticated()){
-         res.render('secrets');
-      } else{
-         res.redirect('/login');
-      }
+     Users.find({"secret": {$ne: null} }, (err, foundUsers)=>{
+         if(err){console.log(err)}
+            else{
+               if(foundUsers){
+                  res.render("secrets",{
+                     usersSecret: foundUsers
+                  })
+               }
+               
+            }
+     } )
 
    });
 
@@ -139,6 +146,35 @@ app.route("/logout")
    .get((req, res)=>{
       req.logout()
       res.redirect('/');
+   })
+
+app.route("/submit")
+   .get((req, res)=>{
+      if(req.isAuthenticated()){
+         res.render('submit');
+   } else{
+      res.redirect('/login');
+   }
+
+   })
+   .post((req, res)=>{
+      const subsecret = req.body.secret;
+
+      Users.findById(req.user.id, (err, foundUser)=>{
+         if(err){
+            console.log(err)
+         } else{
+            if(foundUser){
+               foundUser.secret = subsecret;
+               foundUser.save(()=>{
+                  res.redirect("/secrets");
+               });        
+            }
+          }
+         
+      })
+
+
    })
 
 
@@ -184,9 +220,18 @@ app.route("/login")
       });
       
       req.login(user, (err)=>{
-         if(err) console.log(err);
-            
-         res.redirect('/secrets');
+
+         if(err){ console.log(err)
+
+         }else{
+
+            passport.authenticate("local")(req, res, ()=>{
+               console.log("logged in");
+               res.redirect("/secrets");
+
+            })
+         }
+
       })
    });
 

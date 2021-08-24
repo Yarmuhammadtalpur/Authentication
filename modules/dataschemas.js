@@ -15,6 +15,9 @@ const userschema = new mongoose.Schema({
     },
     facebookId:{
         type: String
+    },
+    secret:{
+        type: String
     }
     
 
